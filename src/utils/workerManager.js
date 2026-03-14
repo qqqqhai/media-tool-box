@@ -17,66 +17,74 @@ class FfmpegWorkerManager {
    * @returns {Promise<boolean>} 加载是否成功
    */
   async init(onProgress) {
-    // 如果已经初始化过，直接返回成功
+    // 如果Worker已经存在且ffmpeg已加载，直接返回成功
     if (this.worker && this.isLoaded) return true
 
     // 保存进度回调
     if (onProgress) this.progressCallback = onProgress
 
     return new Promise((resolve, reject) => {
-      // 创建Worker实例，路径和第一阶段的Worker文件对应
-      this.worker = new Worker(new URL('../workers/ffmpeg.worker.js', import.meta.url), {
-        type: 'module'
-      })
+      // 如果Worker不存在，创建新实例
+      if (!this.worker) {
+        try {
+          this.worker = new Worker(new URL('../workers/ffmpeg.worker.js', import.meta.url), {
+            type: 'module'
+          })
 
-      // 监听Worker发来的消息
-      this.worker.onmessage = (e) => {
-        const { type, data } = e.data
-        switch (type) {
-          // ffmpeg加载成功
-          case 'load-success':
-            this.isLoaded = true
-            resolve(true)
-            break
-          // ffmpeg加载失败
-          case 'load-error':
-            reject(new Error(data || 'ffmpeg加载失败'))
-            break
-          // 处理进度更新
-          case 'progress':
-            if (this.progressCallback) {
-              this.progressCallback(data)
+          // 监听Worker发来的消息
+          this.worker.onmessage = (e) => {
+            const { type, data } = e.data
+            switch (type) {
+              // ffmpeg加载成功
+              case 'load-success':
+                this.isLoaded = true
+                resolve(true)
+                break
+              // ffmpeg加载失败
+              case 'load-error':
+                reject(new Error(data || 'ffmpeg加载失败'))
+                break
+              // 处理进度更新
+              case 'progress':
+                if (this.progressCallback) {
+                  this.progressCallback(data)
+                }
+                break
+              // 转换处理成功
+              case 'convert-success':
+                if (this.pendingPromise) {
+                  this.pendingPromise.resolve(data)
+                  this.pendingPromise = null
+                }
+                break
+              // 转换处理失败
+              case 'convert-error':
+                if (this.pendingPromise) {
+                  this.pendingPromise.reject(new Error(data || '处理失败'))
+                  this.pendingPromise = null
+                }
+                break
+              // 日志输出
+              case 'log':
+                console.log('ffmpeg Worker日志：', data)
+                break
+              // 通用错误
+              case 'error':
+                reject(new Error(data || 'Worker出错'))
+                break
             }
-            break
-          // 转换处理成功
-          case 'convert-success':
-            if (this.pendingPromise) {
-              this.pendingPromise.resolve(data)
-              this.pendingPromise = null
-            }
-            break
-          // 转换处理失败
-          case 'convert-error':
-            if (this.pendingPromise) {
-              this.pendingPromise.reject(new Error(data || '处理失败'))
-              this.pendingPromise = null
-            }
-            break
-          // 日志输出
-          case 'log':
-            console.log('ffmpeg Worker日志：', data)
-            break
-          // 通用错误
-          case 'error':
-            reject(new Error(data || 'Worker出错'))
-            break
+          }
+
+          // 监听Worker错误
+          this.worker.onerror = (err) => {
+            console.error('Worker线程出错：', err)
+            reject(new Error(`Worker出错：${err.message}`))
+          }
+        } catch (err) {
+          console.error('创建Worker失败：', err)
+          reject(new Error(`创建Worker失败：${err.message}`))
+          return
         }
-      }
-
-      // 监听Worker错误
-      this.worker.onerror = (err) => {
-        console.error('Worker线程出错：', err)
-        reject(new Error(`Worker出错：${err.message}`))
       }
 
       // 给Worker发消息，让它加载ffmpeg
@@ -95,8 +103,18 @@ class FfmpegWorkerManager {
    * @returns {Promise<Object>} 处理结果，包含文件数据和文件名
    */
   async execCommand(params) {
+    // 保存进度回调函数
+    const onProgress = params.onProgress
+    // 创建一个新对象，移除onProgress回调函数，因为函数不能被结构化克隆
+    const workerParams = {
+      file: params.file,
+      inputFileName: params.inputFileName,
+      outputFileName: params.outputFileName,
+      command: params.command
+    }
+    
     // 先确保Worker已经初始化完成
-    await this.init(params.onProgress)
+    await this.init(onProgress)
     
     // 用Promise包装，等待Worker返回结果
     return new Promise((resolve, reject) => {
@@ -105,8 +123,8 @@ class FfmpegWorkerManager {
       // 给Worker发消息，执行处理命令
       this.worker.postMessage({
         type: 'convert-image',
-        data: params
-      }, [params.file]) // 用Transferable Objects，减少内存拷贝
+        data: workerParams
+      })
     })
   }
 

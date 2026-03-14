@@ -142,8 +142,6 @@ const handleFileListChange = (files) => {
 
 /**
  * 生成ffmpeg的水印命令（核心逻辑）
- * @param {number} imgWidth 图片宽度（ffmpeg里用变量获取）
- * @param {number} imgHeight 图片高度
  * @returns {string[]} ffmpeg滤镜参数
  */
 const buildWatermarkCommand = () => {
@@ -151,39 +149,40 @@ const buildWatermarkCommand = () => {
   // 把透明度从0-100转成ffmpeg需要的0-1
   const alpha = (opacity / 100).toFixed(2)
   // 处理颜色，把十六进制转成ffmpeg支持的格式，带透明度
-  const fontColor = `color=${color}@${alpha}`
+  const fontColor = `fontcolor=${color}@${alpha}`
+
+  // 转义 drawtext 文本中的特殊字符，避免解析错误
+  const safeText = text
+    .replace(/'/g, "\\\\'")
+    .replace(/:/g, '\\\\:')
+    .replace(/,/g, '\\\\,')
 
   // 不同位置的坐标计算公式（ffmpeg的drawtext滤镜坐标）
   let positionConfig = ''
   switch (position) {
     case 'top-left':
-      // 左上角：x=边距，y=边距
       positionConfig = `x=${margin}:y=${margin}`
       break
     case 'top-right':
-      // 右上角：x=图片宽度-文字宽度-边距，y=边距
       positionConfig = `x=w-tw-${margin}:y=${margin}`
       break
     case 'center':
-      // 居中：x=(图片宽度-文字宽度)/2，y=(图片高度-文字高度)/2
       positionConfig = `x=(w-tw)/2:y=(h-th)/2`
       break
     case 'bottom-left':
-      // 左下角：x=边距，y=图片高度-文字高度-边距
       positionConfig = `x=${margin}:y=h-th-${margin}`
       break
     case 'bottom-right':
-      // 右下角：x=图片宽度-文字宽度-边距，y=图片高度-文字高度-边距
       positionConfig = `x=w-tw-${margin}:y=h-th-${margin}`
       break
     case 'tile':
-      // 全屏平铺：用平铺参数，重复绘制水印
-      positionConfig = `x=mod(n*${tileGap},w+tw)-tw:y=mod(trunc(n*${tileGap}/(w+tw))*${tileGap},h+th)-th`
+      // 全屏平铺
+      positionConfig = `x=mod(n*${tileGap},w):y=mod(n*${tileGap},h)`
       break
   }
 
-  // 拼接完整的drawtext滤镜命令
-  const drawtextFilter = `drawtext=text='${text}':fontsize=${fontSize}:${fontColor}:${positionConfig}`
+  // 不指定系统字体，避免在 WASM 虚拟文件系统中查找字体导致 FS 错误
+  const drawtextFilter = `drawtext=text='${safeText}':fontsize=${fontSize}:${fontColor}:${positionConfig}:enable=1`
   return ['-vf', drawtextFilter]
 }
 
@@ -220,10 +219,13 @@ const handleStartAddWatermark = async () => {
       fileUploadRef.value.updateFileStatus(i, 'processing', { progress: 0 })
 
       try {
-        const inputFileName = `input_${i}_${file.name}`
+        // 生成唯一的文件名，避免冲突
+        const timestamp = Date.now()
+        const random = Math.floor(Math.random() * 10000)
+        const inputFileName = `input_${i}_${timestamp}_${random}.${originExt}`
         // 确定输出文件名和格式
         let outputExt = config.value.outputFormat === 'origin' ? originExt : config.value.outputFormat
-        const outputFileName = `watermark_${file.name.replace(/\.[^.]+$/, `.${outputExt}`)}`
+        const outputFileName = `watermark_${timestamp}_${random}.${outputExt}`
         
         // 1. 基础输入输出命令
         let command = ['-i', inputFileName]

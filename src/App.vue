@@ -4,7 +4,7 @@
     <aside class="sidebar">
       <div class="sidebar-header">
         <h2>离线多媒体工具箱</h2>
-        <p>纯前端·零上传·批量处理</p>
+        <p>零上传·批量处理</p>
       </div>
       
       <!-- 导航菜单 -->
@@ -25,7 +25,6 @@
           <el-menu-item index="image-convert">图片格式转换</el-menu-item>
           <el-menu-item index="image-compress">图片批量压缩</el-menu-item>
           <el-menu-item index="image-resize">图片尺寸调整</el-menu-item>
-          <el-menu-item index="image-watermark">图片水印添加</el-menu-item>
         </el-sub-menu>
 
         <!-- 测试demo菜单，后续可以删掉 -->
@@ -55,7 +54,6 @@
         <ImageConvert v-if="activeMenu === 'image-convert'" />
         <ImageCompress v-if="activeMenu === 'image-compress'" />
         <ImageResize v-if="activeMenu === 'image-resize'" />
-        <ImageWatermark v-if="activeMenu === 'image-watermark'" />
         
         <!-- 测试demo -->
         <TestFfmpeg v-if="activeMenu === 'test-ffmpeg'" />
@@ -76,7 +74,6 @@ import TestWorker from './components/TestWorker.vue'
 import ImageConvert from './components/ImageConvert.vue'
 import ImageCompress from './components/ImageCompress.vue'
 import ImageResize from './components/ImageResize.vue'
-import ImageWatermark from './components/ImageWatermark.vue'
 
 // 响应式状态
 const activeMenu = ref('image-convert') // 默认选中图片格式转换
@@ -85,7 +82,6 @@ const menuTitleMap = {
   'image-convert': '图片格式转换',
   'image-compress': '图片批量压缩',
   'image-resize': '图片尺寸调整',
-  'image-watermark': '图片水印添加',
   'test-ffmpeg': 'ffmpeg核心能力验证',
   'test-worker': 'Web Worker非阻塞验证'
 }

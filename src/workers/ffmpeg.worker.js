@@ -1,4 +1,3 @@
-// 子线程：ffmpeg处理Worker，所有耗时操作都在这里执行，不阻塞主线程
 /**
  * ffmpeg Web Worker 线程
  * 所有耗时的ffmpeg处理都在这里执行，不阻塞主线程，保证页面流畅
@@ -31,26 +30,47 @@ ffmpeg.on('error', (err) => {
  * 加载ffmpeg核心文件
  */
 const loadFfmpeg = async () => {
-  if (isLoaded) return true
+  if (isLoaded) {
+    console.log('Worker线程：ffmpeg已加载，直接返回')
+    return true
+  }
   try {
     console.log('Worker线程：开始加载ffmpeg核心...')
+    
+    // 先测试核心文件是否存在
+    console.log('Worker线程：测试核心文件是否存在...')
+    const coreResponse = await fetch('/ffmpeg-core.js', { method: 'HEAD' })
+    if (!coreResponse.ok) {
+      throw new Error(`核心文件不存在: ${coreResponse.status}`)
+    }
+    console.log('Worker线程：核心文件存在')
+    
+    const wasmResponse = await fetch('/ffmpeg-core.wasm', { method: 'HEAD' })
+    if (!wasmResponse.ok) {
+      throw new Error(`WASM文件不存在: ${wasmResponse.status}`)
+    }
+    console.log('Worker线程：WASM文件存在')
+    
     // 使用toBlobURL来处理文件，避免Vite添加?import参数导致的500错误
+    console.log('Worker线程：创建Blob URL...')
     const coreURL = await toBlobURL('/ffmpeg-core.js', 'text/javascript')
     const wasmURL = await toBlobURL('/ffmpeg-core.wasm', 'application/wasm')
     
     console.log('Worker线程：核心文件URL:', coreURL)
     console.log('Worker线程：WASM文件URL:', wasmURL)
     
+    console.log('Worker线程：开始加载ffmpeg...')
     await ffmpeg.load({
       coreURL,
       wasmURL
     })
-    isLoaded = true
     console.log('Worker线程：ffmpeg加载成功！')
+    isLoaded = true
     self.postMessage({ type: 'load-success' })
     return true
   } catch (err) {
     console.error('Worker线程：ffmpeg加载失败', err)
+    console.error('Worker线程：错误详情:', err.stack)
     self.postMessage({ type: 'load-error', data: err.message || JSON.stringify(err) || '未知错误' })
     return false
   }
@@ -71,14 +91,37 @@ const handleConvert = async (params) => {
 
   try {
     console.log('Worker线程：开始处理文件', inputFileName)
+    console.log('Worker线程：文件类型:', typeof file)
+    console.log('Worker线程：文件是否为File对象:', file instanceof File)
+    console.log('Worker线程：文件属性:', Object.keys(file))
+    
+    // 清理可能存在的旧文件
+    try {
+      await ffmpeg.deleteFile(inputFileName)
+      await ffmpeg.deleteFile(outputFileName)
+      console.log('Worker线程：清理旧文件成功')
+    } catch (e) {
+      console.log('Worker线程：清理旧文件失败（可能文件不存在）:', e.message)
+    }
+    
     // 1. 把源文件写入ffmpeg的虚拟文件系统
-    await ffmpeg.writeFile(inputFileName, await fetchFile(file))
+    console.log('Worker线程：开始读取文件...')
+    const fileData = await fetchFile(file)
+    console.log('Worker线程：文件读取成功，大小:', fileData.length)
+    
+    console.log('Worker线程：开始写入文件到ffmpeg...')
+    await ffmpeg.writeFile(inputFileName, fileData)
+    console.log('Worker线程：文件写入成功')
     
     // 2. 执行ffmpeg命令（核心，命令由主线程传入，适配不同功能）
+    console.log('Worker线程：执行命令:', command.join(' '))
     await ffmpeg.exec(command)
+    console.log('Worker线程：命令执行成功')
     
     // 3. 读取处理完成的输出文件
+    console.log('Worker线程：开始读取处理结果...')
     const outputData = await ffmpeg.readFile(outputFileName)
+    console.log('Worker线程：处理结果读取成功，大小:', outputData.length)
     
     console.log('Worker线程：文件处理完成', outputFileName)
     // 4. 把处理结果回传给主线程，用Transferable优化内存
@@ -90,12 +133,19 @@ const handleConvert = async (params) => {
       }
     }, [outputData.buffer])
 
-    // 5. 清理虚拟文件系统里的临时文件，释放内存
-    await ffmpeg.deleteFile(inputFileName)
-    await ffmpeg.deleteFile(outputFileName)
   } catch (err) {
     console.error('Worker线程：处理失败', err)
-    self.postMessage({ type: 'convert-error', data: err.message })
+    console.error('Worker线程：错误详情:', err.stack)
+    self.postMessage({ type: 'convert-error', data: err.message || JSON.stringify(err) })
+  } finally {
+    // 5. 清理虚拟文件系统里的临时文件，释放内存
+    try {
+      await ffmpeg.deleteFile(inputFileName)
+      await ffmpeg.deleteFile(outputFileName)
+      console.log('Worker线程：临时文件清理成功')
+    } catch (e) {
+      console.log('Worker线程：清理临时文件失败:', e.message)
+    }
   }
 }
 
