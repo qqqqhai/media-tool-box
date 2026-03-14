@@ -27,6 +27,18 @@
           <el-menu-item index="image-resize">图片尺寸调整</el-menu-item>
         </el-sub-menu>
 
+        <!-- 音频处理模块分组 -->
+        <el-sub-menu index="audio-group">
+          <template #title>
+            <el-icon><Headset /></el-icon>
+            <span>音频处理</span>
+          </template>
+          <el-menu-item index="audio-convert">音频格式转换</el-menu-item>
+          <el-menu-item index="audio-trim">音频片段裁剪</el-menu-item>
+          <el-menu-item index="audio-volume">音频音量调整</el-menu-item>
+          <el-menu-item index="audio-extract">视频提取音频</el-menu-item>
+        </el-sub-menu>
+
         <!-- 测试demo菜单，后续可以删掉 -->
         <el-sub-menu index="test-group">
           <template #title>
@@ -54,7 +66,11 @@
         <ImageConvert v-if="activeMenu === 'image-convert'" />
         <ImageCompress v-if="activeMenu === 'image-compress'" />
         <ImageResize v-if="activeMenu === 'image-resize'" />
-        
+        <!-- 音频处理4个功能模块 -->
+        <AudioConvert v-if="activeMenu === 'audio-convert'" />
+        <AudioTrim v-if="activeMenu === 'audio-trim'" />
+        <AudioVolume v-if="activeMenu === 'audio-volume'" />
+        <AudioExtract v-if="activeMenu === 'audio-extract'" />
         <!-- 测试demo -->
         <TestFfmpeg v-if="activeMenu === 'test-ffmpeg'" />
         <TestWorker v-if="activeMenu === 'test-worker'" />
@@ -67,14 +83,18 @@
 // 导入Vue核心API
 import { ref, computed } from 'vue'
 // 导入Element Plus图标
-import { Picture, Tools } from '@element-plus/icons-vue'
+import { Picture, Tools, Headset } from '@element-plus/icons-vue'
 // 导入所有功能组件
 import TestFfmpeg from './components/TestFfmpeg.vue'
 import TestWorker from './components/TestWorker.vue'
-import ImageConvert from './components/ImageConvert.vue'
-import ImageCompress from './components/ImageCompress.vue'
-import ImageResize from './components/ImageResize.vue'
-
+import ImageConvert from './components/image/ImageConvert.vue'
+import ImageCompress from './components/image/ImageCompress.vue'
+import ImageResize from './components/image/ImageResize.vue'
+// 导入音频处理模块组件
+import AudioConvert from './components/audio/AudioConvert.vue'
+import AudioTrim from './components/audio/AudioTrim.vue'
+import AudioVolume from './components/audio/AudioVolume.vue'
+import AudioExtract from './components/audio/AudioExtract.vue'
 // 响应式状态
 const activeMenu = ref('image-convert') // 默认选中图片格式转换
 // 菜单标题映射
@@ -82,9 +102,17 @@ const menuTitleMap = {
   'image-convert': '图片格式转换',
   'image-compress': '图片批量压缩',
   'image-resize': '图片尺寸调整',
+  
+  'audio-convert': '音频格式转换',
+  'audio-trim': '音频片段裁剪',
+  'audio-volume': '音频音量调整',
+  'audio-extract': '视频提取音频',
+
   'test-ffmpeg': 'ffmpeg核心能力验证',
   'test-worker': 'Web Worker非阻塞验证'
 }
+
+
 // 计算当前菜单标题
 const currentMenuTitle = computed(() => menuTitleMap[activeMenu.value])
 
