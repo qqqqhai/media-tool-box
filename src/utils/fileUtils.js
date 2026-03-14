@@ -4,11 +4,32 @@
  */
 
 /**
- * 支持的图片格式配置
+ * 支持的文件格式配置
+ */
+export const FILE_SUPPORT_CONFIG = {
+  // 图片格式
+  image: {
+    exts: ['jpg', 'jpeg', 'png', 'webp', 'avif', 'bmp', 'tiff'],
+    mimeTypePrefix: 'image/'
+  },
+  // 音频格式
+  audio: {
+    exts: ['mp3', 'wav', 'ogg', 'flac', 'aac', 'wma', 'm4a'],
+    mimeTypePrefix: 'audio/'
+  },
+  // 视频格式
+  video: {
+    exts: ['mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv', 'webm'],
+    mimeTypePrefix: 'video/'
+  }
+}
+
+/**
+ * 支持的图片格式配置（保持向后兼容）
  */
 export const IMAGE_SUPPORT_CONFIG = {
   // 支持的输入格式
-  inputExts: ['jpg', 'jpeg', 'png', 'webp', 'avif', 'bmp', 'tiff'],
+  inputExts: FILE_SUPPORT_CONFIG.image.exts,
   // 支持的输出格式
   outputExts: ['jpg', 'png', 'webp', 'avif', 'bmp'],
   // 对应的MIME类型
@@ -20,6 +41,26 @@ export const IMAGE_SUPPORT_CONFIG = {
     avif: 'image/avif',
     bmp: 'image/bmp',
     tiff: 'image/tiff'
+  }
+}
+
+/**
+ * 支持的音频格式配置
+ */
+export const AUDIO_SUPPORT_CONFIG = {
+  // 支持的输入格式
+  inputExts: FILE_SUPPORT_CONFIG.audio.exts,
+  // 支持的输出格式
+  outputExts: ['mp3', 'wav', 'ogg', 'flac', 'aac'],
+  // 对应的MIME类型
+  mimeTypeMap: {
+    mp3: 'audio/mpeg',
+    wav: 'audio/wav',
+    ogg: 'audio/ogg',
+    flac: 'audio/flac',
+    aac: 'audio/aac',
+    wma: 'audio/wma',
+    m4a: 'audio/mp4'
   }
 }
 
@@ -43,6 +84,25 @@ export const formatFileSize = (bytes) => {
 export const getFileExt = (file) => {
   const fileName = typeof file === 'string' ? file : file.name
   return fileName.split('.').pop().toLowerCase()
+}
+
+/**
+ * 判断文件类型（图片、音频、视频）
+ * @param {File|string} file 文件对象或文件名
+ * @returns {string} 文件类型：'image'、'audio'、'video' 或 'unknown'
+ */
+export const getFileType = (file) => {
+  const ext = getFileExt(file)
+  
+  if (FILE_SUPPORT_CONFIG.image.exts.includes(ext)) {
+    return 'image'
+  } else if (FILE_SUPPORT_CONFIG.audio.exts.includes(ext)) {
+    return 'audio'
+  } else if (FILE_SUPPORT_CONFIG.video.exts.includes(ext)) {
+    return 'video'
+  } else {
+    return 'unknown'
+  }
 }
 
 /**
