@@ -110,7 +110,8 @@ class FfmpegWorkerManager {
       file: params.file,
       inputFileName: params.inputFileName,
       outputFileName: params.outputFileName,
-      command: params.command
+      command: params.command,
+      keepInputFile: params.keepInputFile || false
     }
     
     // 先确保Worker已经初始化完成
@@ -122,7 +123,7 @@ class FfmpegWorkerManager {
       
       // 给Worker发消息，执行处理命令
       this.worker.postMessage({
-        type: 'convert-image',
+        type: 'convert',
         data: workerParams
       })
     })

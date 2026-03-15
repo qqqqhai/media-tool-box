@@ -5,6 +5,9 @@
  */
 import { FFmpeg } from '@ffmpeg/ffmpeg'
 import { fetchFile, toBlobURL } from '@ffmpeg/util'
+// 使用本地路径加载ffmpeg核心文件
+const CORE_URL = '/ffmpeg-core.js'
+const WASM_URL = '/ffmpeg-core.wasm'
 
 // 初始化ffmpeg实例
 const ffmpeg = new FFmpeg()
@@ -37,27 +40,32 @@ const loadFfmpeg = async () => {
   try {
     console.log('Worker线程：开始加载ffmpeg核心...')
     
-    // 先测试核心文件是否存在
-    console.log('Worker线程：测试核心文件是否存在...')
-    const coreResponse = await fetch('/ffmpeg-core.js', { method: 'HEAD' })
-    if (!coreResponse.ok) {
-      throw new Error(`核心文件不存在: ${coreResponse.status}`)
-    }
-    console.log('Worker线程：核心文件存在')
+    // 使用CDN URL加载ffmpeg核心文件
+    console.log('Worker线程：使用CDN URL加载ffmpeg核心文件...')
+    console.log('Worker线程：核心文件CDN URL:', CORE_URL)
+    console.log('Worker线程：WASM文件CDN URL:', WASM_URL)
     
-    const wasmResponse = await fetch('/ffmpeg-core.wasm', { method: 'HEAD' })
-    if (!wasmResponse.ok) {
-      throw new Error(`WASM文件不存在: ${wasmResponse.status}`)
+    // 测试CDN链接是否可访问
+    console.log('Worker线程：测试CDN链接是否可访问...')
+    const coreResponse = await fetch(CORE_URL, { method: 'HEAD' })
+    if (!coreResponse.ok) {
+      throw new Error(`核心文件CDN访问失败: ${coreResponse.status}`)
     }
-    console.log('Worker线程：WASM文件存在')
+    console.log('Worker线程：核心文件CDN访问成功')
+    
+    const wasmResponse = await fetch(WASM_URL, { method: 'HEAD' })
+    if (!wasmResponse.ok) {
+      throw new Error(`WASM文件CDN访问失败: ${wasmResponse.status}`)
+    }
+    console.log('Worker线程：WASM文件CDN访问成功')
     
     // 使用toBlobURL来处理文件，避免Vite添加?import参数导致的500错误
     console.log('Worker线程：创建Blob URL...')
-    const coreURL = await toBlobURL('/ffmpeg-core.js', 'text/javascript')
-    const wasmURL = await toBlobURL('/ffmpeg-core.wasm', 'application/wasm')
+    const coreURL = await toBlobURL(CORE_URL, 'text/javascript')
+    const wasmURL = await toBlobURL(WASM_URL, 'application/wasm')
     
-    console.log('Worker线程：核心文件URL:', coreURL)
-    console.log('Worker线程：WASM文件URL:', wasmURL)
+    console.log('Worker线程：核心文件Blob URL:', coreURL)
+    console.log('Worker线程：WASM文件Blob URL:', wasmURL)
     
     console.log('Worker线程：开始加载ffmpeg...')
     await ffmpeg.load({
@@ -81,7 +89,7 @@ const loadFfmpeg = async () => {
  * @param {Object} params 主线程传来的参数
  */
 const handleConvert = async (params) => {
-  const { file, inputFileName, outputFileName, command } = params
+  const { file, inputFileName, outputFileName, command, keepInputFile = false } = params
   
   // 先确保ffmpeg已加载
   if (!isLoaded) {
@@ -91,27 +99,45 @@ const handleConvert = async (params) => {
 
   try {
     console.log('Worker线程：开始处理文件', inputFileName)
-    console.log('Worker线程：文件类型:', typeof file)
-    console.log('Worker线程：文件是否为File对象:', file instanceof File)
-    console.log('Worker线程：文件属性:', Object.keys(file))
     
-    // 清理可能存在的旧文件
-    try {
-      await ffmpeg.deleteFile(inputFileName)
-      await ffmpeg.deleteFile(outputFileName)
-      console.log('Worker线程：清理旧文件成功')
-    } catch (e) {
-      console.log('Worker线程：清理旧文件失败（可能文件不存在）:', e.message)
+    // 检查文件大小，避免处理过大的文件导致内存溢出
+    if (file && file instanceof File) {
+      const fileSizeMB = file.size / (1024 * 1024)
+      console.log('Worker线程：文件大小:', fileSizeMB.toFixed(2), 'MB')
+      // 对于视频文件，限制大小为500MB
+      if (fileSizeMB > 500) {
+        throw new Error('文件过大，最大支持500MB的文件')
+      }
     }
     
-    // 1. 把源文件写入ffmpeg的虚拟文件系统
-    console.log('Worker线程：开始读取文件...')
-    const fileData = await fetchFile(file)
-    console.log('Worker线程：文件读取成功，大小:', fileData.length)
-    
-    console.log('Worker线程：开始写入文件到ffmpeg...')
-    await ffmpeg.writeFile(inputFileName, fileData)
-    console.log('Worker线程：文件写入成功')
+    // 1. 把源文件写入ffmpeg的虚拟文件系统（如果文件对象存在）
+    if (file) {
+      console.log('Worker线程：文件类型:', typeof file)
+      console.log('Worker线程：文件是否为File对象:', file instanceof File)
+      if (file instanceof File) {
+        console.log('Worker线程：文件属性:', Object.keys(file))
+        
+        // 清理输入文件（如果文件对象存在，重新写入）
+        try {
+          await ffmpeg.deleteFile(inputFileName)
+          console.log('Worker线程：清理旧输入文件成功')
+        } catch (e) {
+          console.log('Worker线程：清理旧输入文件失败（可能文件不存在）:', e.message)
+        }
+        
+        console.log('Worker线程：开始读取文件...')
+        const fileData = await fetchFile(file)
+        console.log('Worker线程：文件读取成功，大小:', fileData.length)
+        
+        console.log('Worker线程：开始写入文件到ffmpeg...')
+        await ffmpeg.writeFile(inputFileName, fileData)
+        console.log('Worker线程：文件写入成功')
+      } else {
+        console.log('Worker线程：文件对象不是File类型，跳过写入步骤')
+      }
+    } else {
+      console.log('Worker线程：文件对象为null，跳过写入步骤（文件可能已存在于虚拟文件系统中）')
+    }
     
     // 2. 执行ffmpeg命令（核心，命令由主线程传入，适配不同功能）
     console.log('Worker线程：执行命令:', command.join(' '))
@@ -136,15 +162,75 @@ const handleConvert = async (params) => {
   } catch (err) {
     console.error('Worker线程：处理失败', err)
     console.error('Worker线程：错误详情:', err.stack)
-    self.postMessage({ type: 'convert-error', data: err.message || JSON.stringify(err) })
+    // 处理不同类型的错误
+    if (err.message && err.message.includes('memory access out of bounds')) {
+      self.postMessage({ type: 'convert-error', data: '处理失败：内存不足，请尝试使用较小的视频文件' })
+    } else if (err.message && err.message.includes('ErrnoError: FS error')) {
+      self.postMessage({ type: 'convert-error', data: '处理失败：文件系统错误，请尝试重新选择文件' })
+    } else {
+      self.postMessage({ type: 'convert-error', data: err.message || JSON.stringify(err) })
+    }
   } finally {
     // 5. 清理虚拟文件系统里的临时文件，释放内存
     try {
-      await ffmpeg.deleteFile(inputFileName)
-      await ffmpeg.deleteFile(outputFileName)
+      // 清理输入文件（如果不保留）
+      if (inputFileName && !keepInputFile) {
+        try {
+          await ffmpeg.deleteFile(inputFileName)
+          console.log('Worker线程：清理输入文件成功:', inputFileName)
+        } catch (e) {
+          console.log('Worker线程：清理输入文件失败:', e.message)
+        }
+      } else if (keepInputFile) {
+        console.log('Worker线程：保留输入文件:', inputFileName)
+      }
+      
+      // 清理输出文件
+      if (outputFileName && outputFileName !== inputFileName) {
+        try {
+          // 尝试删除文件，忽略错误
+          await ffmpeg.deleteFile(outputFileName)
+          // 只有在成功删除时才显示日志
+          console.log('Worker线程：清理输出文件成功:', outputFileName)
+        } catch (e) {
+          // 忽略清理错误，不影响主流程
+        }
+      }
+      
+      // 清理可能的临时文件（如palette.png和唯一命名的调色板文件）
+      try {
+        // 尝试删除palette.png，忽略错误
+        await ffmpeg.deleteFile('palette.png')
+      } catch (e) {
+        // 忽略错误，可能文件不存在
+      }
+      
+      // 清理可能的唯一命名调色板文件
+      try {
+        // 列出所有文件，找到以palette_开头的文件并删除
+        const files = await ffmpeg.listDir('.')
+        // 确保files是数组且元素是字符串
+        if (Array.isArray(files)) {
+          for (const file of files) {
+            if (typeof file === 'string' && file.startsWith('palette_')) {
+              try {
+                // 尝试删除文件，忽略错误
+                await ffmpeg.deleteFile(file)
+                // 只有在成功删除时才显示日志
+                console.log('Worker线程：清理临时调色板文件成功:', file)
+              } catch (e) {
+                // 忽略清理错误
+              }
+            }
+          }
+        }
+      } catch (e) {
+        // 忽略错误
+      }
+      
       console.log('Worker线程：临时文件清理成功')
     } catch (e) {
-      console.log('Worker线程：清理临时文件失败:', e.message)
+      // 忽略清理错误
     }
   }
 }
@@ -160,6 +246,7 @@ self.onmessage = async (e) => {
       break
     // 主线程要求执行处理命令
     case 'convert-image':
+    case 'convert':
       await handleConvert(data)
       break
     // 主线程要求销毁实例

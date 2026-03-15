@@ -38,6 +38,18 @@
           <el-menu-item index="audio-volume">音频音量调整</el-menu-item>
           <el-menu-item index="audio-extract">视频提取音频</el-menu-item>
         </el-sub-menu>
+        <!-- 视频处理模块分组 -->
+        <el-sub-menu index="video-group">
+          <template #title>
+            <el-icon><VideoCamera /></el-icon>
+            <span>视频处理</span>
+          </template>
+          <el-menu-item index="video-convert">视频格式转换</el-menu-item>
+          <el-menu-item index="video-compress">视频批量压缩</el-menu-item>
+          <el-menu-item index="video-trim">视频片段裁剪</el-menu-item>
+          <el-menu-item index="video-to-gif">视频转GIF</el-menu-item>
+           <el-menu-item index="video-extract">视频提取封面/音频</el-menu-item>
+        </el-sub-menu>
 
         <!-- 测试demo菜单，后续可以删掉 -->
         <el-sub-menu index="test-group">
@@ -71,6 +83,13 @@
         <AudioTrim v-if="activeMenu === 'audio-trim'" />
         <AudioVolume v-if="activeMenu === 'audio-volume'" />
         <AudioExtract v-if="activeMenu === 'audio-extract'" />
+
+        <!-- 视频处理5个功能模块 -->
+        <VideoConvert v-if="activeMenu === 'video-convert'" />
+        <VideoCompress v-if="activeMenu === 'video-compress'" />
+        <VideoTrim v-if="activeMenu === 'video-trim'" />
+        <VideoToGif v-if="activeMenu === 'video-to-gif'" />
+        <VideoExtract v-if="activeMenu === 'video-extract'" />
         <!-- 测试demo -->
         <TestFfmpeg v-if="activeMenu === 'test-ffmpeg'" />
         <TestWorker v-if="activeMenu === 'test-worker'" />
@@ -83,7 +102,7 @@
 // 导入Vue核心API
 import { ref, computed } from 'vue'
 // 导入Element Plus图标
-import { Picture, Tools, Headset } from '@element-plus/icons-vue'
+import { Picture, Tools, Headset, VideoCamera } from '@element-plus/icons-vue'
 // 导入所有功能组件
 import TestFfmpeg from './components/TestFfmpeg.vue'
 import TestWorker from './components/TestWorker.vue'
@@ -95,6 +114,12 @@ import AudioConvert from './components/audio/AudioConvert.vue'
 import AudioTrim from './components/audio/AudioTrim.vue'
 import AudioVolume from './components/audio/AudioVolume.vue'
 import AudioExtract from './components/audio/AudioExtract.vue'
+// 导入视频处理模块组件
+import VideoConvert from './components/video/VideoConvert.vue'
+import VideoCompress from './components/video/VideoCompress.vue'
+import VideoTrim from './components/video/VideoTrim.vue'
+import VideoToGif from './components/video/VideoToGif.vue'
+import VideoExtract from './components/video/VideoExtract.vue'
 // 响应式状态
 const activeMenu = ref('image-convert') // 默认选中图片格式转换
 // 菜单标题映射
@@ -107,6 +132,12 @@ const menuTitleMap = {
   'audio-trim': '音频片段裁剪',
   'audio-volume': '音频音量调整',
   'audio-extract': '视频提取音频',
+
+   'video-convert': '视频格式转换',
+  'video-compress': '视频批量压缩',
+  'video-trim': '视频片段裁剪',
+  'video-to-gif': '视频转GIF',
+  'video-extract': '视频提取封面/音频',
 
   'test-ffmpeg': 'ffmpeg核心能力验证',
   'test-worker': 'Web Worker非阻塞验证'
