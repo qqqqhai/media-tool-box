@@ -62,6 +62,7 @@
         ref="fileUploadRef"
         accept=".mp4,.avi,.mov,.wmv,.flv,.mkv,.webm"
         acceptTip="MP4、AVI、MOV、WMV、FLV、MKV、WebM"
+        validateMode="video"
         @fileChange="handleFileListChange"
       />
     </el-card>

@@ -12,7 +12,7 @@
       drag
     >
       <el-icon class="upload-icon"><Upload /></el-icon>
-      <div class="upload-text">拖拽图片文件到此处，或点击选择文件</div>
+      <div class="upload-text">拖拽文件到此处，或点击选择文件</div>
       <div class="upload-tip">支持{{ acceptTip }}格式，可批量选择多个文件</div>
     </el-upload>
 
@@ -46,19 +46,34 @@
         <div v-for="(item, index) in fileList" :key="index" class="file-card">
           <!-- 缩略图预览 -->
           <div class="file-thumbnail">
-            <img :src="item.previewUrl" :alt="item.file.name" />
-            <!-- 处理状态标签 -->
-            <div v-if="item.status" class="status-tag" :class="item.status">
-              {{ statusTextMap[item.status] }}
-            </div>
-            <!-- 处理进度条 -->
-            <el-progress
-              v-if="item.status === 'processing' && item.progress >= 0"
-              :percentage="item.progress"
-              :show-text="false"
-              stroke-width="4"
-              class="progress-bar"
-            />
+            <!-- 图片文件：显示缩略图 -->
+              <img v-if="isImageFile(item.file)" :src="item.previewUrl" :alt="item.file.name" />
+              <!-- 音频文件：显示音频图标+播放控件 -->
+              <div v-else-if="isAudioFile(item.file)" class="media-placeholder">
+                <el-icon class="media-icon"><Headset /></el-icon>
+                <audio :src="item.previewUrl" controls style="width: 90%; margin-top: 8px;" />
+              </div>
+              <!-- 视频文件：显示视频缩略图+播放控件 -->
+              <div v-else-if="isVideoFile(item.file)" class="media-placeholder">
+                <el-icon class="media-icon"><VideoCamera /></el-icon>
+                <video :src="item.previewUrl" controls style="width: 90%; margin-top: 8px; max-height: 80px;" />
+              </div>
+              <!-- 其他文件：显示通用图标 -->
+              <div v-else class="media-placeholder">
+                <el-icon class="media-icon"><Paperclip /></el-icon>
+              </div>
+              <!-- 处理状态标签（原有代码不变） -->
+              <div v-if="item.status" class="status-tag" :class="item.status">
+                {{ statusTextMap[item.status] }}
+              </div>
+              <!-- 处理进度条（原有代码不变） -->
+              <el-progress
+                v-if="item.status === 'processing' && item.progress >= 0"
+                :percentage="item.progress"
+                :show-text="false"
+                stroke-width="4"
+                class="progress-bar"
+              />
           </div>
           <!-- 文件信息 -->
           <div class="file-info">
@@ -88,11 +103,11 @@
 
 <script setup>
 import { ref, watch, onUnmounted } from 'vue'
-import { Upload } from '@element-plus/icons-vue'
+import { Upload, Headset, VideoCamera, Paperclip } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 // 导入我们封装的文件工具函数
-import { batchValidateImageFiles, formatFileSize, downloadFile, revokeObjectURLs } from '../utils/fileUtils'
-
+import { batchValidateImageFiles, batchValidateAudioFiles, batchValidateVideoFiles, formatFileSize, downloadFile, revokeObjectURLs, getFileExt } from '../utils/fileUtils'
+import { AUDIO_SUPPORT_CONFIG, VIDEO_SUPPORT_CONFIG } from '../utils/fileUtils'
 // 接收父组件传过来的参数
 const props = defineProps({
   // 支持的文件格式，默认是所有图片格式
@@ -104,6 +119,11 @@ const props = defineProps({
   acceptTip: {
     type: String,
     default: 'JPG、PNG、WebP、AVIF'
+  },
+  // 文件类型验证模式：'image' | 'audio' | 'video' | 'all'
+  validateMode: {
+    type: String,
+    default: 'image'
   }
 })
 
@@ -121,20 +141,68 @@ const statusTextMap = {
   failed: '处理失败'
 }
 
-/**
- * 处理用户选择的文件
- */
+//处理用户选择的文件
+// 判断是否为图片文件
+const isImageFile = (file) => {
+  const ext = getFileExt(file)
+  return ['jpg', 'jpeg', 'png', 'webp', 'avif', 'bmp', 'gif'].includes(ext)
+}
+
+// 判断是否为音频文件
+const isAudioFile = (file) => {
+  const ext = getFileExt(file)
+  return AUDIO_SUPPORT_CONFIG.inputExts.includes(ext)
+}
+
+// 判断是否为视频文件
+const isVideoFile = (file) => {
+  const ext = getFileExt(file)
+  return VIDEO_SUPPORT_CONFIG.inputExts.includes(ext)
+}
+
+ 
 const handleFileChange = (uploadFile) => {
   // 获取用户选择的所有文件
   const rawFiles = uploadFile.raw ? [uploadFile.raw] : uploadFile.map(item => item.raw)
   if (!rawFiles || rawFiles.length === 0) return
 
-  // 批量校验文件格式
-  const { validFiles, errorList: errors } = batchValidateImageFiles(rawFiles)
+  // 根据验证模式选择不同的验证函数
+  let validationResult
+  switch (props.validateMode) {
+    case 'audio':
+      validationResult = batchValidateAudioFiles(rawFiles)
+      break
+    case 'video':
+      validationResult = batchValidateVideoFiles(rawFiles)
+      break
+    case 'all':
+      // 对于'all'模式，我们接受所有文件类型
+      validationResult = {
+        validFiles: rawFiles,
+        errorList: []
+      }
+      break
+    default: // 'image'
+      validationResult = batchValidateImageFiles(rawFiles)
+  }
+
+  const { validFiles, errorList: errors } = validationResult
   errorList.value = errors
 
   if (validFiles.length === 0) {
-    ElMessage.warning('没有选择有效的图片文件')
+    let message = '没有选择有效的文件'
+    switch (props.validateMode) {
+      case 'audio':
+        message = '没有选择有效的音频文件'
+        break
+      case 'video':
+        message = '没有选择有效的视频文件'
+        break
+      case 'image':
+        message = '没有选择有效的图片文件'
+        break
+    }
+    ElMessage.warning(message)
     return
   }
 
@@ -367,5 +435,20 @@ onUnmounted(() => {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+}
+/* 音视频文件占位样式 */
+.media-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-color: #f5f7fa;
+  color: #909399;
+}
+.media-icon {
+  font-size: 36px;
+  margin-top: 10px;
 }
 </style>

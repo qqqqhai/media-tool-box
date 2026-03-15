@@ -65,6 +65,26 @@ export const AUDIO_SUPPORT_CONFIG = {
 }
 
 /**
+ * 视频处理通用配置
+ */
+export const VIDEO_SUPPORT_CONFIG = {
+  // 支持的输入格式
+  inputExts: FILE_SUPPORT_CONFIG.video.exts,
+  // 支持的输出格式
+  outputExts: ['mp4', 'webm', 'avi', 'mov'],
+  // 对应MIME类型
+  mimeTypeMap: {
+    mp4: 'video/mp4',
+    webm: 'video/webm',
+    avi: 'video/x-msvideo',
+    mov: 'video/quicktime',
+    flv: 'video/x-flv',
+    mkv: 'video/x-matroska'
+  }
+}
+
+
+/**
  * 格式化文件大小，把字节转成KB/MB/GB
  * @param {number} bytes 文件字节数
  * @returns {string} 格式化后的大小
@@ -165,6 +185,62 @@ export const downloadFile = (content, fileName) => {
   }
 }
 
+/**
+ * 格式化音视频时长（秒数 → 00:00:00格式）
+ * @param {number} seconds 总秒数
+ * @returns {string} 格式化后的时长
+ */
+export const formatDuration = (seconds) => {
+  if (isNaN(seconds) || seconds < 0) return '00:00:00'
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  const s = Math.floor(seconds % 60)
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+}
+
+/**
+ * 批量校验音频文件
+ * @param {File[]} files 文件列表
+ * @returns {Object} { validFiles: 有效文件, errorList: 错误列表 }
+ */
+export const batchValidateAudioFiles = (files) => {
+  const validFiles = []
+  const errorList = []
+  files.forEach(file => {
+    const ext = getFileExt(file)
+    if (!AUDIO_SUPPORT_CONFIG.inputExts.includes(ext)) {
+      errorList.push({
+        fileName: file.name,
+        message: `不支持的音频格式：${ext}，仅支持${AUDIO_SUPPORT_CONFIG.inputExts.join('、')}格式`
+      })
+    } else {
+      validFiles.push(file)
+    }
+  })
+  return { validFiles, errorList }
+}
+
+/**
+ * 批量校验视频文件
+ * @param {File[]} files 文件列表
+ * @returns {Object} { validFiles: 有效文件, errorList: 错误列表 }
+ */
+export const batchValidateVideoFiles = (files) => {
+  const validFiles = []
+  const errorList = []
+  files.forEach(file => {
+    const ext = getFileExt(file)
+    if (!VIDEO_SUPPORT_CONFIG.inputExts.includes(ext)) {
+      errorList.push({
+        fileName: file.name,
+        message: `不支持的视频格式：${ext}，仅支持${VIDEO_SUPPORT_CONFIG.inputExts.join('、')}格式`
+      })
+    } else {
+      validFiles.push(file)
+    }
+  })
+  return { validFiles, errorList }
+}
 /**
  * 批量下载文件，打包成ZIP（可选进阶功能，先实现单个下载，后续可扩展）
  * 这里先预留接口，后续需要的话，引入jszip即可实现

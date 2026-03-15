@@ -72,6 +72,7 @@
         ref="fileUploadRef"
         accept=".mp3,.wav,.flac,.aac,.ogg,.m4a"
         acceptTip="MP3、WAV、FLAC、AAC、OGG、M4A"
+        validateMode="audio"
         @fileChange="handleFileListChange"
       />
     </el-card>
