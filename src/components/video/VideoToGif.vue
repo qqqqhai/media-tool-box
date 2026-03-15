@@ -158,13 +158,15 @@ const handleStartConvert = async () => {
           outputFileName
         ]
 
-        // 先执行调色板生成，设置keepInputFile为true以保留输入文件供后续使用
+        // 先执行调色板生成，设置 keepInputFile 为 true 以保留输入文件，
+        // 同时设置 keepOutputFile 为 true 保留调色板文件，供第二步使用
         await ffmpegWorker.execCommand({
           file,
           inputFileName,
           outputFileName: paletteFileName,
           command: paletteCommand,
-          keepInputFile: true
+          keepInputFile: true,
+          keepOutputFile: true
         })
 
         // 再执行GIF生成，复用已经写入的输入文件

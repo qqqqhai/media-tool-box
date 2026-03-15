@@ -159,10 +159,14 @@ const handleStartExtract = async () => {
           outputFileName = `cover_${file.name.replace(/\.[^.]+$/, `.${coverFormat}`)}`
           mimeType = IMAGE_SUPPORT_CONFIG.mimeTypeMap[coverFormat]
           
-          // 提取封面核心命令：-ss 时间点，-vframes 1 只取1帧
+          // 提取封面核心命令：
+          // - 使用 -ss 精确到封面时间点
+          // - 只取 1 帧
+          // - 通过 scale 限制分辨率，避免超大分辨率导致 wasm 内存溢出
           command = [
             '-ss', config.value.coverTime,
             '-i', inputFileName,
+            '-vf', 'scale=min(1920,iw):-2',
             '-vframes', '1', // 只提取1帧
             '-q:v', '2', // 最高画质
             '-y',

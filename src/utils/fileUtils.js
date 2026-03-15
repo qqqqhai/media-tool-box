@@ -4,32 +4,11 @@
  */
 
 /**
- * 支持的文件格式配置
- */
-export const FILE_SUPPORT_CONFIG = {
-  // 图片格式
-  image: {
-    exts: ['jpg', 'jpeg', 'png', 'webp', 'avif', 'bmp', 'tiff'],
-    mimeTypePrefix: 'image/'
-  },
-  // 音频格式
-  audio: {
-    exts: ['mp3', 'wav', 'ogg', 'flac', 'aac', 'wma', 'm4a'],
-    mimeTypePrefix: 'audio/'
-  },
-  // 视频格式
-  video: {
-    exts: ['mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv', 'webm'],
-    mimeTypePrefix: 'video/'
-  }
-}
-
-/**
- * 支持的图片格式配置（保持向后兼容）
+ * 支持的图片格式配置
  */
 export const IMAGE_SUPPORT_CONFIG = {
   // 支持的输入格式
-  inputExts: FILE_SUPPORT_CONFIG.image.exts,
+  inputExts: ['jpg', 'jpeg', 'png', 'webp', 'avif', 'bmp', 'tiff'],
   // 支持的输出格式
   outputExts: ['jpg', 'png', 'webp', 'avif', 'bmp'],
   // 对应的MIME类型
@@ -43,46 +22,6 @@ export const IMAGE_SUPPORT_CONFIG = {
     tiff: 'image/tiff'
   }
 }
-
-/**
- * 支持的音频格式配置
- */
-export const AUDIO_SUPPORT_CONFIG = {
-  // 支持的输入格式
-  inputExts: FILE_SUPPORT_CONFIG.audio.exts,
-  // 支持的输出格式
-  outputExts: ['mp3', 'wav', 'ogg', 'flac', 'aac'],
-  // 对应的MIME类型
-  mimeTypeMap: {
-    mp3: 'audio/mpeg',
-    wav: 'audio/wav',
-    ogg: 'audio/ogg',
-    flac: 'audio/flac',
-    aac: 'audio/aac',
-    wma: 'audio/wma',
-    m4a: 'audio/mp4'
-  }
-}
-
-/**
- * 视频处理通用配置
- */
-export const VIDEO_SUPPORT_CONFIG = {
-  // 支持的输入格式
-  inputExts: FILE_SUPPORT_CONFIG.video.exts,
-  // 支持的输出格式
-  outputExts: ['mp4', 'webm', 'avi', 'mov'],
-  // 对应MIME类型
-  mimeTypeMap: {
-    mp4: 'video/mp4',
-    webm: 'video/webm',
-    avi: 'video/x-msvideo',
-    mov: 'video/quicktime',
-    flv: 'video/x-flv',
-    mkv: 'video/x-matroska'
-  }
-}
-
 
 /**
  * 格式化文件大小，把字节转成KB/MB/GB
@@ -104,25 +43,6 @@ export const formatFileSize = (bytes) => {
 export const getFileExt = (file) => {
   const fileName = typeof file === 'string' ? file : file.name
   return fileName.split('.').pop().toLowerCase()
-}
-
-/**
- * 判断文件类型（图片、音频、视频）
- * @param {File|string} file 文件对象或文件名
- * @returns {string} 文件类型：'image'、'audio'、'video' 或 'unknown'
- */
-export const getFileType = (file) => {
-  const ext = getFileExt(file)
-  
-  if (FILE_SUPPORT_CONFIG.image.exts.includes(ext)) {
-    return 'image'
-  } else if (FILE_SUPPORT_CONFIG.audio.exts.includes(ext)) {
-    return 'audio'
-  } else if (FILE_SUPPORT_CONFIG.video.exts.includes(ext)) {
-    return 'video'
-  } else {
-    return 'unknown'
-  }
 }
 
 /**
@@ -186,6 +106,63 @@ export const downloadFile = (content, fileName) => {
 }
 
 /**
+ * 批量下载文件，打包成ZIP（可选进阶功能，先实现单个下载，后续可扩展）
+ * 这里先预留接口，后续需要的话，引入jszip即可实现
+ */
+
+/**
+ * 释放ObjectURL内存，避免内存泄漏
+ * @param {string|string[]} urls 要释放的ObjectURL
+ */
+export const revokeObjectURLs = (urls) => {
+  const urlList = Array.isArray(urls) ? urls : [urls]
+  urlList.forEach(url => {
+    if (url && url.startsWith('blob:')) {
+      URL.revokeObjectURL(url)
+    }
+  })
+}
+
+// ========== 音视频通用配置 ==========
+/**
+ * 音频处理通用配置
+ */
+export const AUDIO_SUPPORT_CONFIG = {
+  // 支持的输入格式
+  inputExts: ['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a', 'wma'],
+  // 支持的输出格式
+  outputExts: ['mp3', 'wav', 'aac', 'ogg', 'm4a'],
+  // 对应MIME类型，用于生成下载文件
+  mimeTypeMap: {
+    mp3: 'audio/mpeg',
+    wav: 'audio/wav',
+    aac: 'audio/aac',
+    ogg: 'audio/ogg',
+    m4a: 'audio/mp4',
+    flac: 'audio/flac'
+  }
+}
+
+/**
+ * 视频处理通用配置
+ */
+export const VIDEO_SUPPORT_CONFIG = {
+  // 支持的输入格式
+  inputExts: ['mp4', 'mov', 'avi', 'mkv', 'flv', 'webm', 'wmv', 'm4v'],
+  // 支持的输出格式
+  outputExts: ['mp4', 'webm', 'avi', 'mov'],
+  // 对应MIME类型
+  mimeTypeMap: {
+    mp4: 'video/mp4',
+    webm: 'video/webm',
+    avi: 'video/x-msvideo',
+    mov: 'video/quicktime',
+    flv: 'video/x-flv',
+    mkv: 'video/x-matroska'
+  }
+}
+
+/**
  * 格式化音视频时长（秒数 → 00:00:00格式）
  * @param {number} seconds 总秒数
  * @returns {string} 格式化后的时长
@@ -241,20 +218,8 @@ export const batchValidateVideoFiles = (files) => {
   })
   return { validFiles, errorList }
 }
-/**
- * 批量下载文件，打包成ZIP（可选进阶功能，先实现单个下载，后续可扩展）
- * 这里先预留接口，后续需要的话，引入jszip即可实现
- */
 
 /**
- * 释放ObjectURL内存，避免内存泄漏
- * @param {string|string[]} urls 要释放的ObjectURL
+ * 批量下载文件，打包成ZIP（后续批量导出用，提前预留）
+ * 后续需要批量下载时，引入jszip库即可实现，这里先预留接口
  */
-export const revokeObjectURLs = (urls) => {
-  const urlList = Array.isArray(urls) ? urls : [urls]
-  urlList.forEach(url => {
-    if (url && url.startsWith('blob:')) {
-      URL.revokeObjectURL(url)
-    }
-  })
-}

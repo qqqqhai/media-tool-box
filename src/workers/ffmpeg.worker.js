@@ -89,7 +89,7 @@ const loadFfmpeg = async () => {
  * @param {Object} params 主线程传来的参数
  */
 const handleConvert = async (params) => {
-  const { file, inputFileName, outputFileName, command, keepInputFile = false } = params
+  const { file, inputFileName, outputFileName, command, keepInputFile = false, keepOutputFile = false } = params
   
   // 先确保ffmpeg已加载
   if (!isLoaded) {
@@ -185,8 +185,8 @@ const handleConvert = async (params) => {
         console.log('Worker线程：保留输入文件:', inputFileName)
       }
       
-      // 清理输出文件
-      if (outputFileName && outputFileName !== inputFileName) {
+      // 清理输出文件（某些场景需要跨命令复用输出文件时，可以通过 keepOutputFile 控制保留）
+      if (!keepOutputFile && outputFileName && outputFileName !== inputFileName) {
         try {
           // 尝试删除文件，忽略错误
           await ffmpeg.deleteFile(outputFileName)
@@ -197,35 +197,12 @@ const handleConvert = async (params) => {
         }
       }
       
-      // 清理可能的临时文件（如palette.png和唯一命名的调色板文件）
+      // 清理可能的临时文件（如固定命名的palette.png）
       try {
         // 尝试删除palette.png，忽略错误
         await ffmpeg.deleteFile('palette.png')
       } catch (e) {
         // 忽略错误，可能文件不存在
-      }
-      
-      // 清理可能的唯一命名调色板文件
-      try {
-        // 列出所有文件，找到以palette_开头的文件并删除
-        const files = await ffmpeg.listDir('.')
-        // 确保files是数组且元素是字符串
-        if (Array.isArray(files)) {
-          for (const file of files) {
-            if (typeof file === 'string' && file.startsWith('palette_')) {
-              try {
-                // 尝试删除文件，忽略错误
-                await ffmpeg.deleteFile(file)
-                // 只有在成功删除时才显示日志
-                console.log('Worker线程：清理临时调色板文件成功:', file)
-              } catch (e) {
-                // 忽略清理错误
-              }
-            }
-          }
-        }
-      } catch (e) {
-        // 忽略错误
       }
       
       console.log('Worker线程：临时文件清理成功')

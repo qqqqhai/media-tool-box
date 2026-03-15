@@ -140,17 +140,31 @@ const handleStartTrim = async () => {
         const outputFileName = `trimmed_${file.name.replace(/\.[^.]+$/, `.${outputExt}`)}`
         
         // 核心：裁剪命令
-        // 【关键】-ss放在-i前面，是关键帧快速定位，裁剪速度极快
-        let command = [
-          '-ss', config.value.startTime, // 开始时间
-          '-to', config.value.endTime,   // 结束时间
-          '-i', inputFileName,           // 输入文件
-          '-y',
-          outputFileName
-        ]
-
-        // 转MP4的话，用H.264编码保证兼容性
-        command.splice(4, 0, '-c:v', 'libx264', '-c:a', 'aac')
+        // 【关键】-ss 放在 -i 前面，是关键帧快速定位，裁剪速度极快
+        let command
+        if (config.value.outputFormat === 'origin') {
+          // 保持原格式，直接流拷贝，避免重新编码，速度更快也更省内存
+          command = [
+            '-ss', config.value.startTime, // 开始时间
+            '-to', config.value.endTime,   // 结束时间
+            '-i', inputFileName,           // 输入文件
+            '-c', 'copy',
+            '-avoid_negative_ts', 'make_zero',
+            '-y',
+            outputFileName
+          ]
+        } else {
+          // 转成 MP4，使用 H.264 + AAC 编码，兼容性最好
+          command = [
+            '-ss', config.value.startTime, // 开始时间
+            '-to', config.value.endTime,   // 结束时间
+            '-i', inputFileName,           // 输入文件
+            '-c:v', 'libx264',
+            '-c:a', 'aac',
+            '-y',
+            outputFileName
+          ]
+        }
 
         // 执行裁剪命令
         const result = await ffmpegWorker.execCommand({

@@ -111,7 +111,9 @@ class FfmpegWorkerManager {
       inputFileName: params.inputFileName,
       outputFileName: params.outputFileName,
       command: params.command,
-      keepInputFile: params.keepInputFile || false
+      keepInputFile: params.keepInputFile || false,
+      // 是否在本次执行后保留输出文件（例如转 GIF 的第一步，需要保留调色板文件）
+      keepOutputFile: params.keepOutputFile || false
     }
     
     // 先确保Worker已经初始化完成
