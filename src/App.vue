@@ -48,7 +48,6 @@
           <el-menu-item index="video-compress">视频批量压缩</el-menu-item>
           <el-menu-item index="video-trim">视频片段裁剪</el-menu-item>
           <el-menu-item index="video-to-gif">视频转GIF</el-menu-item>
-           <el-menu-item index="video-extract">视频提取封面/音频</el-menu-item>
         </el-sub-menu>
 
         <!-- 测试demo菜单，后续可以删掉 -->
@@ -89,7 +88,6 @@
         <VideoCompress v-if="activeMenu === 'video-compress'" />
         <VideoTrim v-if="activeMenu === 'video-trim'" />
         <VideoToGif v-if="activeMenu === 'video-to-gif'" />
-        <VideoExtract v-if="activeMenu === 'video-extract'" />
         <!-- 测试demo -->
         <TestFfmpeg v-if="activeMenu === 'test-ffmpeg'" />
         <TestWorker v-if="activeMenu === 'test-worker'" />
@@ -119,7 +117,6 @@ import VideoConvert from './components/video/VideoConvert.vue'
 import VideoCompress from './components/video/VideoCompress.vue'
 import VideoTrim from './components/video/VideoTrim.vue'
 import VideoToGif from './components/video/VideoToGif.vue'
-import VideoExtract from './components/video/VideoExtract.vue'
 // 响应式状态
 const activeMenu = ref('image-convert') // 默认选中图片格式转换
 // 菜单标题映射
@@ -137,7 +134,6 @@ const menuTitleMap = {
   'video-compress': '视频批量压缩',
   'video-trim': '视频片段裁剪',
   'video-to-gif': '视频转GIF',
-  'video-extract': '视频提取封面/音频',
 
   'test-ffmpeg': 'ffmpeg核心能力验证',
   'test-worker': 'Web Worker非阻塞验证'
