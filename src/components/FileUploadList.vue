@@ -37,13 +37,29 @@
     <!-- 已上传的文件列表 -->
     <div v-if="fileList.length > 0" class="file-list-container">
       <div class="list-header">
-        <span>已选择 {{ fileList.length }} 个文件</span>
-        <el-button type="danger" text @click="handleClearAll">清空全部</el-button>
+        <div class="select-all-section">
+          <el-checkbox v-model="selectAll" @change="handleSelectAll">全选</el-checkbox>
+          <span style="margin-left: 10px;">已选择 {{ selectedFiles.length }} 个文件</span>
+        </div>
+        <div class="header-actions">
+          <el-button 
+            type="primary" 
+            :disabled="selectedFiles.length === 0"
+            @click="handleBatchDownload"
+          >
+            批量下载
+          </el-button>
+          <el-button type="danger" text @click="handleClearAll">清空全部</el-button>
+        </div>
       </div>
 
       <!-- 文件列表网格 -->
       <div class="file-grid">
         <div v-for="(item, index) in fileList" :key="index" class="file-card">
+          <!-- 选择复选框 -->
+          <div class="file-checkbox">
+            <el-checkbox v-model="item.selected" @change="handleFileSelect(index)"></el-checkbox>
+          </div>
           <!-- 缩略图预览 -->
           <div class="file-thumbnail">
             <!-- 图片文件：显示缩略图 -->
@@ -102,9 +118,9 @@
 </template>
 
 <script setup>
-import { ref, watch, onUnmounted } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 import { Upload, Headset, VideoCamera, Paperclip } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElCheckbox } from 'element-plus'
 // 导入我们封装的文件工具函数
 import { batchValidateImageFiles, batchValidateAudioFiles, batchValidateVideoFiles, formatFileSize, downloadFile, revokeObjectURLs, getFileExt } from '../utils/fileUtils'
 import { AUDIO_SUPPORT_CONFIG, VIDEO_SUPPORT_CONFIG } from '../utils/fileUtils'
@@ -133,6 +149,7 @@ const emit = defineEmits(['fileChange'])
 // 响应式状态
 const fileList = ref([]) // 有效文件列表
 const errorList = ref([]) // 格式错误的文件列表
+const selectAll = ref(false) // 全选状态
 // 处理状态文本映射
 const statusTextMap = {
   pending: '待处理',
@@ -140,6 +157,11 @@ const statusTextMap = {
   success: '处理完成',
   failed: '处理失败'
 }
+
+// 计算属性：已选择的文件列表
+const selectedFiles = computed(() => {
+  return fileList.value.filter(item => item.selected)
+})
 
 //处理用户选择的文件
 // 判断是否为图片文件
@@ -219,7 +241,8 @@ const handleFileChange = (uploadFile) => {
       progress: 0, // 处理进度
       resultFile: null, // 处理后的文件对象
       resultSize: '', // 处理后的文件大小
-      errorMsg: '' // 处理失败的错误信息
+      errorMsg: '', // 处理失败的错误信息
+      selected: false // 是否被选中
     }
   })
 
@@ -272,11 +295,60 @@ const handleClearAll = () => {
 }
 
 /**
+ * 处理全选/取消全选
+ */
+const handleSelectAll = (value) => {
+  fileList.value.forEach(item => {
+    item.selected = value
+  })
+}
+
+/**
+ * 处理单个文件选择
+ */
+const handleFileSelect = (index) => {
+  // 检查是否所有文件都被选中
+  const allSelected = fileList.value.every(item => item.selected)
+  selectAll.value = allSelected
+}
+
+/**
  * 下载单个处理完成的文件
  */
 const handleDownload = (item) => {
   if (!item.resultFile) return
   downloadFile(item.resultFile.blob, item.resultFile.fileName)
+}
+
+/**
+ * 批量下载选中的文件
+ */
+const handleBatchDownload = async () => {
+  const selected = selectedFiles.value
+  if (selected.length === 0) return
+
+  // 过滤出有结果文件的选中文件
+  const validFiles = selected.filter(item => item.resultFile)
+  if (validFiles.length === 0) {
+    ElMessage.warning('请选择已处理完成的文件')
+    return
+  }
+
+  try {
+    ElMessage.info(`开始下载 ${validFiles.length} 个文件`)
+    
+    // 逐个下载文件
+    for (const item of validFiles) {
+      downloadFile(item.resultFile.blob, item.resultFile.fileName)
+      // 延迟一下，避免浏览器阻塞
+      await new Promise(resolve => setTimeout(resolve, 100))
+    }
+    
+    ElMessage.success(`已完成 ${validFiles.length} 个文件的下载`)
+  } catch (error) {
+    console.error('批量下载失败:', error)
+    ElMessage.error('批量下载失败，请重试')
+  }
 }
 
 // 给父组件暴露的方法，父组件可以直接调用
@@ -297,8 +369,14 @@ defineExpose({
       item.resultFile = null
       item.resultSize = ''
       item.errorMsg = ''
+      item.selected = false
     })
-  }
+    selectAll.value = false
+  },
+  // 批量下载选中的文件
+  batchDownload: handleBatchDownload,
+  // 获取已选择的文件
+  getSelectedFiles: () => selectedFiles.value
 })
 
 // 组件销毁时，释放所有内存，避免内存泄漏
@@ -351,6 +429,17 @@ onUnmounted(() => {
   font-size: 14px;
   color: #606266;
 }
+
+.select-all-section {
+  display: flex;
+  align-items: center;
+}
+
+.header-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
 /* 文件网格布局 */
 .file-grid {
   display: grid;
@@ -364,9 +453,21 @@ onUnmounted(() => {
   overflow: hidden;
   background-color: #fff;
   transition: box-shadow 0.2s;
+  position: relative;
 }
 .file-card:hover {
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* 文件选择复选框 */
+.file-checkbox {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 20;
+  background-color: rgba(255, 255, 255, 0.9);
+  border-radius: 4px;
+  padding: 2px;
 }
 /* 缩略图区域 */
 .file-thumbnail {
