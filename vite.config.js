@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 
 export default defineConfig({
+  base:'/media-tool-box/',
   plugins: [vue()],
   // 配置跨域隔离响应头，解决ffmpeg所需的API权限问题
   server: {
