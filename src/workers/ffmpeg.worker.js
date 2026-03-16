@@ -6,8 +6,9 @@
 import { FFmpeg } from '@ffmpeg/ffmpeg'
 import { fetchFile, toBlobURL } from '@ffmpeg/util'
 // 使用本地路径加载ffmpeg核心文件
-const CORE_URL = '/ffmpeg-core.js'
-const WASM_URL = '/ffmpeg-core.wasm'
+const BASE_URL = import.meta.env.BASE_URL || '/'
+const CORE_URL = `${BASE_URL}ffmpeg-core.js`
+const WASM_URL = `${BASE_URL}ffmpeg-core.wasm`
 
 // 初始化ffmpeg实例
 const ffmpeg = new FFmpeg()
@@ -69,8 +70,8 @@ const loadFfmpeg = async () => {
     
     console.log('Worker线程：开始加载ffmpeg...')
     await ffmpeg.load({
-      coreURL,
-      wasmURL
+      coreURL: CORE_URL,
+      wasmURL: WASM_URL
     })
     console.log('Worker线程：ffmpeg加载成功！')
     isLoaded = true

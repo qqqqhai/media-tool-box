@@ -101,8 +101,9 @@ const handleLoad = () => {
       
       console.log('使用本地文件加载方式...')
       // 使用toBlobURL来处理文件，避免模块加载问题
-      const coreURL = await toBlobURL('/ffmpeg-core.js', 'text/javascript')
-      const wasmURL = await toBlobURL('/ffmpeg-core.wasm', 'application/wasm')
+      const BASE_URL = import.meta.env.BASE_URL || '/'
+      const coreURL = await toBlobURL(`${BASE_URL}ffmpeg-core.js`, 'text/javascript')
+      const wasmURL = await toBlobURL(`${BASE_URL}ffmpeg-core.wasm`, 'application/wasm')
       
       console.log('核心文件URL:', coreURL)
       console.log('WASM文件URL:', wasmURL)
@@ -131,8 +132,9 @@ const handleLoad = () => {
     try {
       console.log('🔄 尝试使用本地加载方式...')
       // 检查是否存在本地核心文件
-      const localCoreURL = '/ffmpeg-core.js'
-      const localWasmURL = '/ffmpeg-core.wasm'
+      const BASE_URL = import.meta.env.BASE_URL || '/'
+      const localCoreURL = `${BASE_URL}ffmpeg-core.js`
+      const localWasmURL = `${BASE_URL}ffmpeg-core.wasm`
       
       console.log('本地核心文件URL:', localCoreURL)
       console.log('本地WASM文件URL:', localWasmURL)

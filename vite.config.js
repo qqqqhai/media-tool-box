@@ -12,9 +12,7 @@ export default defineConfig({
     }
   },
   // 排除ffmpeg相关依赖，避免Vite依赖优化器的问题
-  optimizeDeps: {
-    exclude: ['@ffmpeg/ffmpeg', '@ffmpeg/util']
-  },
+ 
    build: {
     outDir: 'docs' // 把打包输出的文件夹名改成docs
   }
