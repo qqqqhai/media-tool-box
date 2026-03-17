@@ -6,9 +6,9 @@
 import { FFmpeg } from '@ffmpeg/ffmpeg'
 import { fetchFile, toBlobURL } from '@ffmpeg/util'
 // 使用本地路径加载ffmpeg核心文件
-const BASE_URL = import.meta.env.BASE_URL || '/'
-const CORE_URL = `${BASE_URL}ffmpeg-core.js`
-const WASM_URL = `${BASE_URL}ffmpeg-core.wasm`
+const basePath = import.meta.env.DEV ? '/' : import.meta.env.BASE_URL
+const CORE_URL = `${basePath}ffmpeg-core.js`
+const WASM_URL = `${basePath}ffmpeg-core.wasm`
 
 // 初始化ffmpeg实例
 const ffmpeg = new FFmpeg()
