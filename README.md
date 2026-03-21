@@ -1,7 +1,10 @@
-# Vue 3 + Vite
+#基于wasm的多媒体批量处理工具
 一个纯前端实现的离线多媒体批量处理工具，基于Vue3 + WebAssembly + Web Worker开发，所有处理都在浏览器本地完成，无需上传文件到服务器，完全保护用户隐私，支持图片、音频、视频三大类媒体的批量处理。
 
 网址https://qqqqhai.github.io/media-tool-box/
+![Uploading QQ_1774072979392.png…]()
+![Uploading QQ_1774072992106.png…]()
+
 
 //主要功能：
 图片格式批量转换（JPG/PNG/WebP/AVIF等格式互转）
