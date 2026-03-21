@@ -60,7 +60,7 @@
           <el-menu-item index="video-to-gif">视频转GIF</el-menu-item>
         </el-sub-menu>
 
-        <!-- 测试demo菜单，后续可以删掉 -->
+        <!-- 测试demo菜单 -->
         <el-sub-menu index="test-group">
           <template #title>
             <el-icon><Tools /></el-icon>
@@ -70,7 +70,7 @@
           <el-menu-item index="test-worker">Worker非阻塞验证</el-menu-item>
         </el-sub-menu>
 
-        <!-- 后续音频、视频模块，第三阶段再添加 -->
+        
       </el-menu>
     </aside>
 
